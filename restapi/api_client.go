@@ -29,8 +29,11 @@ type apiClientOpt struct {
 	idAttribute         string
 	createMethod        string
 	readMethod          string
+	readData            string
 	updateMethod        string
+	updateData          string
 	destroyMethod       string
+	destroyData         string
 	copyKeys            []string
 	writeReturnsObject  bool
 	createReturnsObject bool
@@ -60,8 +63,11 @@ type APIClient struct {
 	idAttribute         string
 	createMethod        string
 	readMethod          string
+    readData            string
 	updateMethod        string
+	updateData          string
 	destroyMethod       string
+	destroyData         string
 	copyKeys            []string
 	writeReturnsObject  bool
 	createReturnsObject bool
@@ -157,8 +163,11 @@ func NewAPIClient(opt *apiClientOpt) (*APIClient, error) {
 		idAttribute:         opt.idAttribute,
 		createMethod:        opt.createMethod,
 		readMethod:          opt.readMethod,
+		readData:            opt.readData,
 		updateMethod:        opt.updateMethod,
+		updateData:          opt.updateData,
 		destroyMethod:       opt.destroyMethod,
+		destroyData:         opt.destroyData,
 		copyKeys:            opt.copyKeys,
 		writeReturnsObject:  opt.writeReturnsObject,
 		createReturnsObject: opt.createReturnsObject,

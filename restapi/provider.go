@@ -54,7 +54,7 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("REST_API_TIMEOUT", 0),
 				Description: "When set, will cause requests taking longer than this time (in seconds) to be aborted.",
 			},
-            "retry": {
+			"retry": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("REST_API_RETRY", 0),

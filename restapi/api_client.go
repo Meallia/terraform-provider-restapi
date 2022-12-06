@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -66,7 +67,7 @@ type APIClient struct {
 	idAttribute         string
 	createMethod        string
 	readMethod          string
-    readData            string
+	readData            string
 	updateMethod        string
 	updateData          string
 	destroyMethod       string
@@ -221,14 +222,39 @@ func (client *APIClient) toString() string {
 	return buffer.String()
 }
 
+func (client *APIClient) doRequest(req *http.Request) (*http.Response, error) {
+	var resp *http.Response = nil
+	var err error = errors.New("No attempt made.")
+
+	for attempt := 0; attempt <= client.retry; attempt++ {
+		resp, err := client.httpClient.Do(req)
+		if err != nil { // No HTTP response, transport error
+			if v, ok := err.(*url.Error); ok {
+				if redirectsErrorRe.MatchString(v.Error()) || schemeErrorRe.MatchString(v.Error()) || notTrustedErrorRe.MatchString(v.Error()) {
+					return resp, err
+				}
+				if _, ok := v.Err.(x509.UnknownAuthorityError); ok {
+					return resp, err
+				}
+			}
+			// retry
+		} else { // HTTP response
+			if !((resp.StatusCode == http.StatusTooManyRequests) || (resp.StatusCode == 0) || (resp.StatusCode >= 500 && resp.StatusCode != http.StatusNotImplemented)) {
+				return resp, err
+			}
+			// retry
+		}
+		time.Sleep(time.Duration(5*(1+attempt) + rand.Intn(5)))
+	}
+	return resp, err
+}
+
 /* Helper function that handles sending/receiving and handling
    of HTTP data in and out. */
 func (client *APIClient) sendRequest(method string, path string, data string) (string, error) {
 	fullURI := client.uri + path
 	var req *http.Request
 	var err error
-    var resp http.Response
-
 
 	if client.debug {
 		log.Printf("api_client.go: method='%s', path='%s', full uri (derived)='%s', data='%s'\n", method, path, fullURI, data)
@@ -301,37 +327,7 @@ func (client *APIClient) sendRequest(method string, path string, data string) (s
 		_ = client.rateLimiter.Wait(context.Background())
 	}
 
-    for attempt := 0; attempt < client.retry; attempt++ {
-	    resp, err := client.httpClient.Do(req)
-	    if err != nil { // No HTTP response, transport error
-	        if v, ok := err.(*url.Error); ok {
-                if redirectsErrorRe.MatchString(v.Error()) {
-                    break
-                }
-                if schemeErrorRe.MatchString(v.Error()) {
-                    break
-                }
-                if notTrustedErrorRe.MatchString(v.Error()) {
-                    break
-                }
-                if _, ok := v.Err.(x509.UnknownAuthorityError); ok {
-                    break
-                }
-	        }
-	        // if none of the above conditions matched, the error is likely recoverable.
-            // continue
-	    } else { // HTTP response available
-               	if resp.StatusCode == http.StatusTooManyRequests {
-                    continue
-                }
-                if resp.StatusCode == 0 || (resp.StatusCode >= 500 && resp.StatusCode != http.StatusNotImplemented) {
-                   continue
-                }
-               // if none of the above conditions matched, the error is likely unrecoverable.
-               // break
-	    }
-	    time.Sleep(5)
-	}
+	resp, err := client.doRequest(req)
 
 	if err != nil {
 		//log.Printf("api_client.go: Error detected: %s\n", err)

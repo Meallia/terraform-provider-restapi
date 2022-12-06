@@ -142,7 +142,7 @@ func resourceRestAPI() *schema.Resource {
 				ForceNew:    true,
 				Description: "Any changes to these values will result in recreating the resource instead of updating.",
 			},
-            "read_data": {
+			"read_data": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Valid JSON data to pass during to read requests.",
@@ -413,7 +413,7 @@ func buildAPIObjectOpts(d *schema.ResourceData) (*apiObjectOpts, error) {
 	if v, ok := d.GetOk("read_method"); ok {
 		opts.readMethod = v.(string)
 	}
-    if v, ok := d.GetOk("read_data"); ok {
+	if v, ok := d.GetOk("read_data"); ok {
 		opts.readData = v.(string)
 	}
 	if v, ok := d.GetOk("update_method"); ok {

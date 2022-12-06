@@ -81,7 +81,7 @@ func NewAPIObject(iClient *APIClient, opts *apiObjectOpts) (*APIObject, error) {
 	if opts.readMethod == "" {
 		opts.readMethod = iClient.readMethod
 	}
-    if opts.readData == "" {
+	if opts.readData == "" {
 		opts.readData = iClient.readData
 	}
 	if opts.updateMethod == "" {
@@ -326,9 +326,9 @@ func (obj *APIObject) readObject() error {
 		return fmt.Errorf("cannot read an object unless the ID has been set")
 	}
 
-    b := []byte{}
+	b := []byte{}
 
-    readData, _ := json.Marshal(obj.readData)
+	readData, _ := json.Marshal(obj.readData)
 	if string(readData) != "{}" {
 		if obj.debug {
 			log.Printf("api_object.go: Using read data '%s'", string(readData))

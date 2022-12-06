@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,6 +28,7 @@ type apiClientOpt struct {
 	password            string
 	headers             map[string]string
 	timeout             int
+	retry               int
 	idAttribute         string
 	createMethod        string
 	readMethod          string
@@ -75,7 +78,12 @@ type APIClient struct {
 	rateLimiter         *rate.Limiter
 	debug               bool
 	oauthConfig         *clientcredentials.Config
+	retry               int
 }
+
+var redirectsErrorRe = regexp.MustCompile(`stopped after \d+ redirects\z`)
+var schemeErrorRe = regexp.MustCompile(`unsupported protocol scheme`)
+var notTrustedErrorRe = regexp.MustCompile(`certificate is not trusted`)
 
 //NewAPIClient makes a new api client for RESTful calls
 func NewAPIClient(opt *apiClientOpt) (*APIClient, error) {
@@ -173,6 +181,7 @@ func NewAPIClient(opt *apiClientOpt) (*APIClient, error) {
 		createReturnsObject: opt.createReturnsObject,
 		xssiPrefix:          opt.xssiPrefix,
 		debug:               opt.debug,
+		retry:               opt.retry,
 	}
 
 	if opt.oauthClientID != "" && opt.oauthClientSecret != "" && opt.oauthTokenURL != "" {
@@ -218,6 +227,8 @@ func (client *APIClient) sendRequest(method string, path string, data string) (s
 	fullURI := client.uri + path
 	var req *http.Request
 	var err error
+    var resp http.Response
+
 
 	if client.debug {
 		log.Printf("api_client.go: method='%s', path='%s', full uri (derived)='%s', data='%s'\n", method, path, fullURI, data)
@@ -290,7 +301,37 @@ func (client *APIClient) sendRequest(method string, path string, data string) (s
 		_ = client.rateLimiter.Wait(context.Background())
 	}
 
-	resp, err := client.httpClient.Do(req)
+    for attempt := 0; attempt < client.retry; attempt++ {
+	    resp, err := client.httpClient.Do(req)
+	    if err != nil { // No HTTP response, transport error
+	        if v, ok := err.(*url.Error); ok {
+                if redirectsErrorRe.MatchString(v.Error()) {
+                    break
+                }
+                if schemeErrorRe.MatchString(v.Error()) {
+                    break
+                }
+                if notTrustedErrorRe.MatchString(v.Error()) {
+                    break
+                }
+                if _, ok := v.Err.(x509.UnknownAuthorityError); ok {
+                    break
+                }
+	        }
+	        // if none of the above conditions matched, the error is likely recoverable.
+            // continue
+	    } else { // HTTP response available
+               	if resp.StatusCode == http.StatusTooManyRequests {
+                    continue
+                }
+                if resp.StatusCode == 0 || (resp.StatusCode >= 500 && resp.StatusCode != http.StatusNotImplemented) {
+                   continue
+                }
+               // if none of the above conditions matched, the error is likely unrecoverable.
+               // break
+	    }
+	    time.Sleep(5)
+	}
 
 	if err != nil {
 		//log.Printf("api_client.go: Error detected: %s\n", err)

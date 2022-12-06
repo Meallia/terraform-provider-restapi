@@ -87,6 +87,7 @@ var client, err = NewAPIClient(&apiClientOpt{
 	password:            "",
 	headers:             make(map[string]string),
 	timeout:             5,
+	retry:               0,
 	idAttribute:         "Id",
 	copyKeys:            []string{"Thing"},
 	writeReturnsObject:  true,

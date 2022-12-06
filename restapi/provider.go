@@ -54,6 +54,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("REST_API_TIMEOUT", 0),
 				Description: "When set, will cause requests taking longer than this time (in seconds) to be aborted.",
 			},
+            "retry": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("REST_API_RETRY", 0),
+				Description: "When set, will cause requests to be retried on network error.",
+			},
 			"id_attribute": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -232,6 +238,7 @@ func configureProvider(d *schema.ResourceData) (interface{}, error) {
 		headers:             headers,
 		useCookies:          d.Get("use_cookies").(bool),
 		timeout:             d.Get("timeout").(int),
+		retry:               d.Get("retry").(int),
 		idAttribute:         d.Get("id_attribute").(string),
 		copyKeys:            copyKeys,
 		writeReturnsObject:  d.Get("write_returns_object").(bool),

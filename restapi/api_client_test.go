@@ -25,6 +25,7 @@ func TestAPIClient(t *testing.T) {
 		password:            "",
 		headers:             make(map[string]string),
 		timeout:             2,
+		retry:               0,
 		idAttribute:         "id",
 		copyKeys:            make([]string, 0),
 		writeReturnsObject:  false,

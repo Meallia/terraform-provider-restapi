@@ -237,12 +237,16 @@ func (client *APIClient) doRequest(req *http.Request) (*http.Response, error) {
 					return resp, err
 				}
 			}
-			// retry
+			if client.debug {
+				log.Printf("api_client.go: Retryable error: %s\n", err)
+			}
 		} else { // HTTP response
 			if !((resp.StatusCode == http.StatusTooManyRequests) || (resp.StatusCode == 0) || (resp.StatusCode >= 500 && resp.StatusCode != http.StatusNotImplemented)) {
 				return resp, err
 			}
-			// retry
+			if client.debug {
+				log.Printf("api_client.go: Retryable HTTP code: %d\n", resp.StatusCode)
+			}
 		}
 		time.Sleep(time.Duration(5*(1+attempt) + rand.Intn(5)))
 	}
